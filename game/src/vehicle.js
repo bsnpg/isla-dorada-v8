@@ -1,7 +1,3 @@
-// Driving: the hero car, arcade handling, collisions and the low close chase
-// camera. The car is built from boxes with a glossy windshield, emissive lights,
-// a spoiler, mirrors and spinning wheels. Forward is +z rotated by heading:
-// forward = (sin(heading), 0, cos(heading)).
 import * as THREE from 'three';
 import { KEYS, VEHICLES } from './config.js';
 import { clamp, lerp } from './random.js';
@@ -27,7 +23,6 @@ function makeSmokeTexture() {
 
 let smokeTexture = null;
 
-/** Build a detailed car from boxes and add it to the scene. */
 export function makeCar(G, defName, x, z, heading) {
   const def = VEHICLES[defName] || VEHICLES.sedan;
   const group = new THREE.Group();
@@ -54,13 +49,10 @@ export function makeCar(G, defName, x, z, heading) {
   }
 
   const tall = defName === 'van';
-  // Body: low wide slab + cabin. Front is +z.
   part(1.9, tall ? 1.15 : 0.55, 4.4, paint, 0, tall ? 0.9 : 0.55, 0);
   part(1.65, tall ? 0.7 : 0.5, tall ? 2.6 : 2.3, paint, 0, tall ? 1.75 : 1.05, tall ? -0.4 : -0.2);
-  // Dark glossy windshield + rear glass, slanted.
   part(1.5, 0.06, 0.95, glass, 0, tall ? 1.7 : 1.12, 0.95, -0.45);
   part(1.5, 0.06, 0.8, glass, 0, tall ? 1.7 : 1.12, -1.25, 0.45);
-  // Headlights, grille, bumpers, tail lights.
   part(0.35, 0.15, 0.08, headMat, -0.6, 0.62, 2.21);
   part(0.35, 0.15, 0.08, headMat, 0.6, 0.62, 2.21);
   part(1.0, 0.18, 0.06, dark, 0, 0.5, 2.21);
@@ -68,18 +60,15 @@ export function makeCar(G, defName, x, z, heading) {
   part(1.95, 0.18, 0.15, dark, 0, 0.32, -2.25);
   part(0.4, 0.14, 0.08, tailMat, -0.6, 0.65, -2.21);
   part(0.4, 0.14, 0.08, tailMat, 0.6, 0.65, -2.21);
-  // Mirrors.
   part(0.18, 0.12, 0.3, paint, -1.02, 1.05, 0.7);
   part(0.18, 0.12, 0.3, paint, 1.02, 1.05, 0.7);
 
   if (defName === 'aureaGT' || defName === 'muscle') {
-    // Rear spoiler on two supports.
     part(1.7, 0.06, 0.4, paint, 0, 1.28, -2.0);
     part(0.08, 0.22, 0.08, dark, -0.6, 1.15, -2.0);
     part(0.08, 0.22, 0.08, dark, 0.6, 1.15, -2.0);
   }
   if (defName === 'police') {
-    // IDPD light bar: red + blue halves.
     const red = new THREE.MeshStandardMaterial({ color: 0xff2222, emissive: 0xff0000, emissiveIntensity: 2 });
     const blue = new THREE.MeshStandardMaterial({ color: 0x2266ff, emissive: 0x0044ff, emissiveIntensity: 2 });
     part(0.6, 0.12, 0.3, red, -0.32, 1.38, -0.2);
@@ -90,7 +79,6 @@ export function makeCar(G, defName, x, z, heading) {
     part(0.7, 0.16, 0.3, headMat, 0, 1.38, -0.2); // roof sign
   }
 
-  // Wheels: 4 cylinders in steer pivots at the front, fixed at the rear.
   const wheelGeo = new THREE.CylinderGeometry(tall ? 0.42 : 0.36, tall ? 0.42 : 0.36, 0.26, 12);
   const hubGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.28, 8);
   const wheels = [];
@@ -110,7 +98,6 @@ export function makeCar(G, defName, x, z, heading) {
     if (front) frontPivots.push(pivot);
   }
 
-  // Damage smoke, from the engine bay (front). Hidden until damage is high.
   if (!smokeTexture) smokeTexture = makeSmokeTexture();
   const smoke = new THREE.Sprite(new THREE.SpriteMaterial({
     map: smokeTexture, transparent: true, opacity: 0, depthWrite: false,
@@ -137,7 +124,6 @@ export function makeCar(G, defName, x, z, heading) {
   return car;
 }
 
-/** Spawn the hero Aurea GT and set up driving state. */
 export function initDriving(G) {
   const hero = makeCar(G, 'aureaGT', 120, 40, Math.PI); // beachfront road, facing north
   G.car = hero;
@@ -152,15 +138,12 @@ export function initDriving(G) {
 }
 
 function hasUpgrade(G, id) {
-  // Upgrades live on G.upgrades.owned (main.js; save.js persists it) and are
-  // mirrored onto G.progression.upgrades (same array); accept either shape.
   const up = (G.upgrades && G.upgrades.owned) || (G.progression && G.progression.upgrades);
   if (!up) return false;
   return Array.isArray(up) ? up.includes(id) : !!up[id];
 }
 
 function collideCircle(G, pos, radius) {
-  // Circle vs every building/stall AABB: push out, report impact speed.
   const colliders = (G.world && G.world.colliders) || [];
   let hit = 0;
   for (const c of colliders) {
@@ -171,7 +154,6 @@ function collideCircle(G, pos, radius) {
     let dist = Math.hypot(dx, dz);
     if (dist >= radius) continue;
     if (dist < 0.001) {
-      // Centre inside the box: push out along the smallest penetration axis.
       const pushes = [
         [pos.x - c.minX, -1, 0], [c.maxX - pos.x, 1, 0],
         [pos.z - c.minZ, 0, -1], [c.maxZ - pos.z, 0, 1],
@@ -193,7 +175,6 @@ function collideCircle(G, pos, radius) {
   return hit;
 }
 
-/** Enter a car: hide the player mesh, hand control to the car. */
 export function enterCar(G, car) {
   const target = car || G.car;
   if (!target || !G.player) return;
@@ -207,7 +188,6 @@ export function enterCar(G, car) {
   if (G.input) G.input.clearPressed();
 }
 
-/** Exit the hero car: place the player on the driver's side, show the mesh. */
 export function exitCar(G) {
   const car = G.car;
   if (!car || !G.player) return;
@@ -227,15 +207,11 @@ export function exitCar(G) {
   if (G.input) G.input.clearPressed();
 }
 
-/** Arcade driving + E to enter/exit. Runs every fixed step while mode is 'play'. */
 export function updateDriving(G, dt) {
   const input = G.input;
   const car = G.car;
   if (!input || !car || !G.player) return;
 
-  // E: get in when on foot and close to a car (the player's nearCar scan
-  // covers traffic cars as well as the hero car), get out when driving.
-  // This is the ONLY owner of E — player.js only scans for the prompt.
   if (input.justPressed('KeyE')) {
     if (G.player.onFoot) {
       if (G.player.nearCar) enterCar(G, G.player.nearCar);
@@ -251,8 +227,6 @@ export function updateDriving(G, dt) {
   if (G.player.onFoot) return;
 
   const def = car.def;
-  // Driving skill is stored by name ('Driving', level 1 at start) in
-  // progression.skills; only levels above 1 add speed.
   const drv = (G.progression && G.progression.skills && G.progression.skills.Driving) || null;
   const drivingSkill = drv ? Math.max(0, (drv.level || 1) - 1) : 0;
   const topSpeed = def.topSpeed * (hasUpgrade(G, 'engine2') ? 1.15 : 1) * (1 + drivingSkill * 0.02);
@@ -276,7 +250,6 @@ export function updateDriving(G, dt) {
     else car.speed -= def.accel * 0.6 * dt; // reverse
   }
   if (!fwd && !back) {
-    // Engine drag + rolling resistance.
     car.speed -= car.speed * 0.8 * dt + Math.sign(car.speed) * 1.2 * dt;
     if (Math.abs(car.speed) < 0.2) car.speed = 0;
   }
@@ -285,7 +258,6 @@ export function updateDriving(G, dt) {
   }
   car.speed = clamp(car.speed, -def.reverseSpeed, maxSpeed);
 
-  // Steering: sharper at low speed, looser at top speed; flips in reverse.
   const steerTarget = (left ? 1 : 0) - (right ? 1 : 0);
   const steerRate = handbrake ? 6 : 4;
   car.steer = lerp(car.steer, steerTarget, Math.min(1, steerRate * dt));
@@ -299,14 +271,12 @@ export function updateDriving(G, dt) {
   car.pos.z += fz * car.speed * dt;
   car.mesh.rotation.y = car.heading;
 
-  // Collisions: buildings and stalls push the car out; hard hits dent it.
   const speedBefore = Math.abs(car.speed);
   if (collideCircle(G, car.pos, CAR_RADIUS) && speedBefore > 6) {
     const dmg = (speedBefore - 6) * 0.9 * (hasUpgrade(G, 'armour') ? 0.5 : 1);
     car.damage = clamp(car.damage + dmg, 0, 100);
     car.speed *= 0.45;
   }
-  // World bounds.
   const b = (G.world && G.world.bounds) || { minX: -200, maxX: 215, minZ: -200, maxZ: 200 };
   if (car.pos.x < b.minX || car.pos.x > b.maxX || car.pos.z < b.minZ || car.pos.z > b.maxZ) {
     car.pos.x = clamp(car.pos.x, b.minX, b.maxX);
@@ -314,12 +284,10 @@ export function updateDriving(G, dt) {
     car.speed *= 0.5;
   }
 
-  // Wheels spin with speed; front wheels yaw with the steering.
   const wheelSpin = (car.speed * dt) / 0.36;
   for (const wheel of car.wheels) wheel.rotation.x += wheelSpin;
   for (const pivot of car.frontPivots) pivot.rotation.y = car.steer * 0.42;
 
-  // Damage smoke: thick grey puffs once the car is badly dented.
   const smokeLevel = clamp((car.damage - 55) / 45, 0, 1);
   if (car.smoke) {
     car.smoke.material.opacity = smokeLevel * (0.55 + 0.3 * Math.sin((G.time || 0) * 9));
@@ -354,7 +322,6 @@ export function updateChaseCam(G, dt) {
     const k = 1 - Math.exp(-7 * dt);
     v.camPos.lerp(desired, k);
   }
-  // Never clip a building: lift the camera above any roof it would sit inside.
   const colliders = (G.world && G.world.colliders) || [];
   for (const c of colliders) {
     if (v.camPos.x > c.minX - 0.5 && v.camPos.x < c.maxX + 0.5

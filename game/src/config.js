@@ -1,5 +1,3 @@
-// Every tuning number, name and colour in one place. Isla Dorada is our own city:
-// a warm sunset island, 7 districts, 8 story jobs, one hero car and a crew of six.
 
 export const GAME = {
   title: 'Isla Dorada: 8 Jobs to Clear His Name',
@@ -16,7 +14,6 @@ export const GAME = {
 
 export const STEP = GAME.step;
 
-/** Key bindings (event.code). The sibling modules read these through G.input. */
 export const KEYS = {
   forward: ['KeyW', 'ArrowUp'],
   back: ['KeyS', 'ArrowDown'],
@@ -42,7 +39,6 @@ export const KEYS = {
   phone: ['KeyT'],
 };
 
-/** The 8-job story arc: "Bersihkan Nama" — Wowo clears his name, one job at a time. */
 export const MISSIONS = [
   {
     code: 'M1', name: 'Pendaratan', title: 'Pendaratan',
@@ -94,7 +90,6 @@ export const MISSIONS = [
   },
 ];
 
-/** City districts. Rects are in world x/z; districtAt(x, z) in world.js resolves them. */
 export const DISTRICTS = [
   { name: 'Casino Row', minX: -60, maxX: 60, minZ: -110, maxZ: -10, vibe: 'Neon, high rollers, trouble', control: 'IDPD patrols heavy' },
   { name: 'Palm Heights', minX: -170, maxX: -60, minZ: -170, maxZ: -10, vibe: 'Quiet villas above the town', control: 'Calm' },
@@ -105,7 +100,6 @@ export const DISTRICTS = [
   { name: 'Causeway', minX: -170, maxX: 170, minZ: -190, maxZ: -170, vibe: 'The long bridge road out of town', control: 'Open road, fast chases' },
 ];
 
-/** Warm sunset palette: readable at a glance, sun-soaked, low-poly flat shading. */
 export const PALETTE = {
   skyTop: '#2e5fa3',
   skyMid: '#e8804f',
@@ -139,7 +133,6 @@ export const PALETTE = {
   panel: 'rgba(20, 12, 24, 0.72)',
 };
 
-/** Vehicles. topSpeed in m/s, accel in m/s^2. Hero car is the Aurea GT. */
 export const VEHICLES = {
   aureaGT: {
     name: 'Aurea GT', kind: 'hero', color: 0xff6b35, topSpeed: 42, accel: 16, brake: 34,
@@ -171,7 +164,6 @@ export const VEHICLES = {
   },
 };
 
-/** Weapons. mag = rounds per magazine, reserve = spare rounds carried. */
 export const WEAPONS = [
   { name: 'Fists', slot: 0, mag: Infinity, reserve: Infinity, damage: 12, range: 2.2, fireRate: 2.2, auto: false },
   { name: 'Pistol', slot: 1, mag: 12, reserve: 60, damage: 22, range: 45, fireRate: 3.5, auto: false },
@@ -181,14 +173,12 @@ export const WEAPONS = [
   { name: 'Bazooka', slot: 5, mag: 1, reserve: 6, damage: 120, range: 90, fireRate: 0.7, auto: false, explosive: true },
 ];
 
-/** Properties the player can own (garage / safehouse). */
 export const PROPERTIES = [
   { id: 'garage', name: 'Palm Heights Garage', price: 4500, district: 'Palm Heights', desc: 'Wowo’s garage. Store cars, fit upgrades.' },
   { id: 'safehouse', name: 'Old Town Safehouse', price: 6000, district: 'Old Town', desc: 'A quiet flat above the market. Save and heal here.' },
   { id: 'beachhouse', name: 'Beachfront Bungalow', price: 12000, district: 'Beachfront', desc: 'Sand at the door, sea at the window.' },
 ];
 
-/** Skills that grow with play (sibling progression module reads these). */
 export const SKILL_DEFS = [
   { id: 'driving', name: 'Driving', desc: 'Better handling, faster top speed, longer nitro.' },
   { id: 'shooting', name: 'Shooting', desc: 'Less recoil, faster reload, steadier aim.' },
@@ -196,7 +186,6 @@ export const SKILL_DEFS = [
   { id: 'jetpack', name: 'Jetpack', desc: 'Longer flight, faster recharge.' },
 ];
 
-/** Garage upgrades (sibling progression module applies these; driving reads nitro/armour). */
 export const UPGRADES = [
   { id: 'nitro', name: 'Nitro Boost', price: 1500, desc: 'Hold Shift for a burst of speed.' },
   { id: 'engine2', name: 'Tuned Engine', price: 2200, desc: '+15% top speed on the Aurea GT.' },
@@ -205,7 +194,6 @@ export const UPGRADES = [
   { id: 'repair', name: 'Full Repair', price: 300, desc: 'Fix the Aurea GT back to 0% damage.' },
 ];
 
-/** Radio. No audio files are shipped; the audio module synthesises island-pop jingles. */
 export const RADIO = {
   name: 'RADIO SOL 92.5',
   stations: [
@@ -215,7 +203,6 @@ export const RADIO = {
   ],
 };
 
-/** Warm low sunset sun, ahead of the hero car on the beachfront road. */
 export const SUN_POSITION = {
   direction: { x: -0.25, y: 0.26, z: -0.93 }, // low in the north sky
   color: 0xffb36b,

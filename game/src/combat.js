@@ -1,6 +1,3 @@
-// combat.js — Isla Dorada V8: weapons, gunmen, tracers, explosions.
-// Fresh code. Five weapons from WEAPONS (config) with mag/reserve ammo,
-// R reload, 1-5 switch, click-to-shoot, tracers, muzzle flash, bazooka blast.
 import * as THREE from 'three';
 import * as CFG from './config.js';
 
@@ -11,8 +8,6 @@ const FALLBACK_WEAPONS = [
   { name: 'Rifle', damage: 40, mag: 20, reserve: 100, rate: 0.16, auto: true, range: 90, spread: 0.015 },
   { name: 'Bazooka', damage: 120, mag: 1, reserve: 6, rate: 1.4, auto: false, range: 80, spread: 0.005, explosive: true },
 ];
-// Normalize config weapons (config uses fireRate = shots/sec, no spread;
-// slot 0 is Fists, a melee weapon) into the fields combat uses.
 function normalizeWeapons(raw) {
   const spreadFor = (name) => (name === 'Shotgun' ? 0.12 : name === 'SMG' ? 0.05 : name === 'Rifle' ? 0.015 : name === 'Bazooka' ? 0.005 : 0.01);
   return raw.map((w) => ({
@@ -145,7 +140,6 @@ export function explodeAt(G, pos, radius, damage) {
   const C = G.combat;
   C.lastExplosionAt = G.time || 0;
   C.shake = 1;
-  // Blast sphere + debris particles.
   const mat = new THREE.MeshBasicMaterial({ color: 0xff8c2a, transparent: true, opacity: 0.9 });
   const sphere = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), mat);
   sphere.position.copy(pos);
@@ -166,7 +160,6 @@ export function explodeAt(G, pos, radius, damage) {
   G.scene.add(light);
   C.particles.push({ mesh: light, life: 0.3, kind: 'light' });
   if (G.audio && G.audio.playExplosion) G.audio.playExplosion();
-  // Damage enemies, the hero, nearby traffic and the hero car.
   for (const e of C.enemies) {
     if (!e.active || e.dead) continue;
     if (e.pos.distanceTo(pos) < radius) damageEnemy(G, e, damage);
@@ -184,7 +177,6 @@ export function explodeAt(G, pos, radius, damage) {
 export function damageEnemy(G, enemy, amount) {
   if (!enemy.active || enemy.dead) return;
   enemy.hp -= amount;
-  // Hit flash: tint the torso red briefly.
   enemy.mesh.traverse((child) => {
     if (child.isMesh && child.material && child.material.emissive) {
       child.material.emissive = new THREE.Color(0x881111);
@@ -198,7 +190,6 @@ export function damageEnemy(G, enemy, amount) {
     enemy.mesh.position.y = 0.35;
     G.combat.kills += 1;
     if (G.progression) G.progression._kills = (G.progression._kills || 0) + 1;
-    // Drop cash, sometimes a weapon pickup.
     dropPickup(G, enemy.pos.clone(), Math.random() < 0.65 ? 'cash' : 'weapon');
     if (G.audio && G.audio.playKill) G.audio.playKill();
   }
@@ -254,7 +245,6 @@ function tryShoot(G, dt) {
   C.shotsFired += 1;
   if (ammo && ammo.mag !== Infinity) ammo.mag -= 1;
 
-  // Melee (Fists): no tracer, hit the nearest enemy inside arm's reach.
   if (def.melee) {
     let best = null;
     let bestDist = def.range;
@@ -270,8 +260,6 @@ function tryShoot(G, dt) {
   const origin = P.pos.clone();
   origin.y += 1.45;
   const heading = P.heading;
-  // Shots fly along the hero's visual facing: (sin heading, cos heading),
-  // the same convention driving and the on-foot camera use.
   const forward = new THREE.Vector3(Math.sin(heading), 0, Math.cos(heading));
   const pellets = def.pellets || 1;
   let hitAny = false;
@@ -281,7 +269,6 @@ function tryShoot(G, dt) {
     dir.z += (Math.random() - 0.5) * def.spread * 2;
     dir.y += (Math.random() - 0.5) * def.spread;
     dir.normalize();
-    // Nearest enemy inside a narrow cone along the shot.
     let best = null;
     let bestDist = def.range;
     for (const e of C.enemies) {
@@ -334,7 +321,6 @@ export function updateCombat(G, dt) {
   }
   if ((G.mode === 'play' || G.mode === undefined) && P && P.onFoot) tryShoot(G, dt);
 
-  // Enemies: approach, shoot, fall, despawn.
   const heroPos = P ? P.pos : new THREE.Vector3();
   for (const e of C.enemies) {
     if (!e.active) continue;
@@ -359,7 +345,6 @@ export function updateCombat(G, dt) {
     const swing = Math.sin(e.walkPhase) * 0.45;
     u.legL.rotation.x = swing;
     u.legR.rotation.x = -swing;
-    // Shoot at the hero when close enough.
     e.shootTimer -= dt;
     if (dist < 34 && e.shootTimer <= 0 && (G.mode === 'play' || G.mode === undefined)) {
       e.shootTimer = 1.4 + Math.random() * 1.2;
@@ -371,7 +356,6 @@ export function updateCombat(G, dt) {
     }
   }
 
-  // Pickups: bob, spin, collect on proximity.
   for (let i = C.pickups.length - 1; i >= 0; i -= 1) {
     const pk = C.pickups[i];
     pk.life -= dt;
@@ -397,7 +381,6 @@ export function updateCombat(G, dt) {
     }
   }
 
-  // Tracers / flashes / particles fade out.
   for (let i = C.tracers.length - 1; i >= 0; i -= 1) {
     const t = C.tracers[i];
     t.life -= dt;
@@ -425,6 +408,5 @@ export function updateCombat(G, dt) {
     }
     if (p.life <= 0) { G.scene.remove(p.mesh); C.particles.splice(i, 1); }
   }
-  // Camera shake decays; the renderer/camera owner applies G.combat.shake.
   if (C.shake > 0) C.shake = Math.max(0, C.shake - dt * 2.2);
 }

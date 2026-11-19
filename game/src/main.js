@@ -1,8 +1,3 @@
-// Boot and the one loop: input is read every frame, the world advances in fixed
-// 1/60 s steps (several in a slow frame, none in a fast one), and the renderer
-// paints what is there. Modes: title, play, map, garage, paused, dead.
-// ?seed=N fixes the city layout. ?shot=<name> (with &seed=N) stages that scene
-// instead of running the loop, paints it twice and sets window.__shotReady.
 import * as THREE from 'three';
 import { GAME, KEYS, MISSIONS } from './config.js';
 import { Input } from './input.js';
@@ -21,7 +16,6 @@ import { saveGame, loadGame, hasSave } from './save.js';
 import { initAudio, updateAudio } from './audio.js';
 import { stageShot } from './shots.js';
 
-/** The longest frame the loop catches up on; a longer stall (a hidden tab) is dropped, not replayed. */
 const MAX_FRAME = 0.25;
 const STEP = GAME.step;
 
@@ -78,7 +72,6 @@ const G = {
   lights: null,
 };
 
-// Cross-module helpers, attached so sibling modules can reach each other via G.
 G.districtAt = districtAt;
 G.setWanted = (level) => setWanted(G, level);
 G.startMission = (indexOrMission) => startMission(G, indexOrMission);
@@ -96,7 +89,6 @@ function announce(message) {
   if (statusEl) statusEl.textContent = message;
 }
 
-// --- Init, in the agreed order ----------------------------------------------
 G.input = new Input(canvas);
 G.player = {
   mesh: null,
@@ -122,8 +114,6 @@ initHUD(G);
 initScreens(G);
 initProgression(G);
 initAudio(G);
-// The canonical upgrades store: G.upgrades.owned, mirrored onto
-// G.progression.upgrades (same array) so driving, garage and saves agree.
 G.upgrades = { owned: [] };
 if (G.progression) G.progression.upgrades = G.upgrades.owned;
 
@@ -159,7 +149,6 @@ function stepPlay(dt) {
 }
 
 function stepAmbient(dt) {
-  // Title / paused / map / garage / dead: the city stays alive behind the screens.
   G.time += dt;
   updateCity(G, dt);
   updateSky(G, dt);
@@ -173,7 +162,6 @@ function handleModeKeys() {
   if (G.mode === 'title') {
     if (confirm) {
       setMode('play', 'Playing. Clear Wowo’s name.');
-      // A fresh run starts Job 1 the moment play begins.
       if (G.missions && !G.missions.current && (G.missions.done || []).length === 0) G.startMission(1);
     }
   } else if (G.mode === 'play') {
@@ -208,7 +196,6 @@ function runGame() {
   showTitle(G);
   announce('Isla Dorada. Press Enter to start.');
 
-  // Leaving the tab pauses a running game rather than letting the city run unseen.
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && G.mode === 'play') setMode('paused', 'Paused.');
   });
@@ -224,7 +211,6 @@ function runGame() {
         accumulator -= STEP;
       }
     } else {
-      // Title backdrop: slow orbit around the Casino Dorada.
       if (G.mode === 'title') {
         const t = G.time * 0.05;
         camera.position.set(Math.sin(t) * 90, 26, -65 + Math.cos(t) * 90);
@@ -239,10 +225,6 @@ function runGame() {
 }
 
 function runShot(name) {
-  // Frozen screenshot scene: stage it (the integrator's shots.js positions
-  // player, car, traffic and police), paint twice, signal the harness.
-  // stageShot may set G._shotCam = 'manual' when it owns the camera itself
-  // (on-foot / stats / title); otherwise the chase cam frames the car.
   G.mode = 'play';
   G._shotCam = 'chase';
   stageShot(G, name);

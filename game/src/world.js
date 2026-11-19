@@ -1,13 +1,6 @@
-// Isla Dorada: the city, the sky and the light. A warm sunset island built from
-// flat-shaded boxes: a road grid with double-yellow markings, detailed buildings
-// (window grids, rooftop signs with our own names), a beach and sea on the east
-// edge, palms, lamps, a market plaza and the Casino Dorada landmark.
-// Colliders are axis-aligned boxes in G.world.colliders, shared by driving,
-// traffic, player and police.
 import * as THREE from 'three';
 import { DISTRICTS, GAME, PALETTE, SUN_POSITION } from './config.js';
 
-/** Road centre lines. Roads run between the blocks; the beachfront avenue hugs the sand. */
 const ROAD_X = [-160, -120, -80, -40, 0, 40, 80, 120, 150];
 const ROAD_Z = [-160, -120, -80, -40, 0, 40, 80, 120, 160];
 const ROAD_W = 10;
@@ -62,7 +55,6 @@ function makeSkyTexture() {
   return tex;
 }
 
-/** A flat-shaded box mesh from the shared geometry, castShadow on by default. */
 function box(w, h, d, material, x, y, z) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
   mesh.position.set(x, y, z);
@@ -71,7 +63,6 @@ function box(w, h, d, material, x, y, z) {
   return mesh;
 }
 
-/** Push an AABB collider (plus its height, for camera clamping) into the list. */
 function addCollider(list, cx, cz, w, d, h) {
   list.push({ minX: cx - w / 2, maxX: cx + w / 2, minZ: cz - d / 2, maxZ: cz + d / 2, h });
 }
@@ -108,7 +99,6 @@ export function buildCity(G) {
   );
   const roofMat = new THREE.MeshLambertMaterial({ color: 0x5a4a42, flatShading: true });
 
-  // --- Ground, sand and sea -------------------------------------------------
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(560, 480), mats.ground);
   ground.rotation.x = -Math.PI / 2;
   ground.position.set(20, 0, 0);
@@ -117,8 +107,6 @@ export function buildCity(G) {
 
   const sand = new THREE.Mesh(new THREE.PlaneGeometry(24, 440), mats.sand);
   sand.rotation.x = -Math.PI / 2;
-  // 0.015 sits below the beachfront road (0.02) so the two planes never
-  // z-fight where the avenue meets the sand, and above the ground (0).
   sand.position.set(GAME.beachX + 11, 0.015, 0);
   sand.receiveShadow = true;
   group.add(sand);
@@ -131,14 +119,12 @@ export function buildCity(G) {
   seaDeep.rotation.x = -Math.PI / 2;
   seaDeep.position.set(GAME.seaX + 165, -0.6, 0);
   group.add(seaDeep);
-  // A pale wave strip where the sea meets the sand; it slides in updateCity().
   const wave = new THREE.Mesh(new THREE.PlaneGeometry(3, 440), mats.white);
   wave.rotation.x = -Math.PI / 2;
   wave.position.set(GAME.seaX + 1, 0.05, 0);
   wave.material = new THREE.MeshBasicMaterial({ color: 0xeaf6f6, transparent: true, opacity: 0.55 });
   group.add(wave);
 
-  // --- Roads, sidewalks and markings ----------------------------------------
   const roadLen = CITY_MAX - CITY_MIN + 40;
   for (const x of ROAD_X) {
     const walk = new THREE.Mesh(new THREE.PlaneGeometry(ROAD_W + 5, roadLen), mats.sidewalk);
@@ -176,7 +162,6 @@ export function buildCity(G) {
       group.add(line);
     }
   }
-  // White lane dashes, one InstancedMesh for the whole city.
   const dashGeo = new THREE.PlaneGeometry(0.16, 2.6);
   const dashTransforms = [];
   const dummy = new THREE.Object3D();
@@ -200,9 +185,6 @@ export function buildCity(G) {
   dashes.instanceMatrix.needsUpdate = true;
   group.add(dashes);
 
-  // --- Buildings ------------------------------------------------------------
-  // Blocks sit between neighbouring roads. The casino block and the market
-  // plaza are kept clear and built by hand below.
   const casinoRect = { minX: -22, maxX: 22, minZ: -82, maxZ: -48 };
   const marketRect = { minX: -142, maxX: -98, minZ: 98, maxZ: 142 };
   const windowTransformsLit = [];
@@ -219,7 +201,6 @@ export function buildCity(G) {
     group.add(roof);
     addCollider(colliders, cx, cz, w, d, h);
     buildingList.push({ x: cx, z: cz, w, d, h });
-    // Window grid on the two long faces (front +z, back -z).
     const floors = Math.max(1, Math.floor(h / 3.4));
     const cols = Math.max(1, Math.floor(w / 2.8));
     for (let f = 0; f < floors; f += 1) {
@@ -263,7 +244,6 @@ export function buildCity(G) {
     }
   }
 
-  // Window grids: two InstancedMeshes (lit warm, dark glass), one draw call each.
   const windowGeo = new THREE.PlaneGeometry(1.3, 1.7);
   const litMat = new THREE.MeshBasicMaterial({ color: PALETTE.windowLit });
   const darkMat = new THREE.MeshBasicMaterial({ color: PALETTE.windowDark });
@@ -286,7 +266,6 @@ export function buildCity(G) {
   darkMesh.instanceMatrix.needsUpdate = true;
   group.add(darkMesh);
 
-  // Rooftop / front signs with our own names, on the tallest buildings.
   const tall = [...buildingList].sort((a, b) => b.h - a.h).slice(0, SIGN_TEXTS.length);
   const signMats = [];
   for (const b of tall) {
@@ -303,7 +282,6 @@ export function buildCity(G) {
     group.add(post2);
   }
 
-  // --- Casino Dorada landmark ------------------------------------------------
   const casinoMat = new THREE.MeshLambertMaterial({ color: 0x7a1f3d, flatShading: true });
   const casino = box(36, 24, 26, casinoMat, 0, 12, -65);
   group.add(casino);
@@ -314,7 +292,6 @@ export function buildCity(G) {
   const casinoSign = new THREE.Mesh(new THREE.PlaneGeometry(30, 7.5), casinoSignMat);
   casinoSign.position.set(0, 19, -65 + 13.1);
   group.add(casinoSign);
-  // Gold entrance canopy + columns.
   const canopy = box(16, 0.8, 6, new THREE.MeshLambertMaterial({ color: 0xffd166, flatShading: true }), 0, 5.5, -65 + 15);
   group.add(canopy);
   for (const cx of [-7, 7]) {
@@ -323,7 +300,6 @@ export function buildCity(G) {
   }
   addCollider(colliders, 0, -65, 36, 26, 24);
 
-  // --- Old Town market plaza -------------------------------------------------
   const plaza = new THREE.Mesh(new THREE.PlaneGeometry(44, 44), new THREE.MeshLambertMaterial({ color: 0xc9a06a }));
   plaza.rotation.x = -Math.PI / 2;
   plaza.position.set(-120, 0.015, 120);
@@ -343,7 +319,6 @@ export function buildCity(G) {
     addCollider(colliders, sx, sz, 3.6, 2.2, 2.4);
   }
 
-  // --- Palms: instanced trunks + canopies, along the beach and the avenues ---
   const palmSpots = [];
   for (let z = -170; z <= 170; z += 13) palmSpots.push([155 + (rng() - 0.5) * 4, z + (rng() - 0.5) * 4]);
   for (const x of [-120, -40, 40, 120]) {
@@ -372,7 +347,6 @@ export function buildCity(G) {
   group.add(trunkMesh);
   group.add(canopyMesh);
 
-  // --- Street lamps, benches, hydrants ---------------------------------------
   const lampSpots = [];
   for (const x of ROAD_X) for (let z = -170; z <= 170; z += 34) lampSpots.push([x + 6.5, z]);
   for (const z of ROAD_Z) for (let x = -170; x <= 130; x += 34) lampSpots.push([x, z + 6.5]);
@@ -418,9 +392,7 @@ export function buildCity(G) {
     signMats,
     casinoPos: { x: 0, z: -65 },
     marketPos: { x: -120, z: 120 },
-    // Wowo spawns beside the parked hero car on the beachfront road.
     playerSpawn: new THREE.Vector3(120, 0, 44),
-    // Real road centrelines for traffic (N-S roads run along z, E-W along x).
     roads: [
       ...ROAD_X.map((v) => ({ axis: 'z', at: v })),
       ...ROAD_Z.map((v) => ({ axis: 'x', at: v })),
@@ -429,7 +401,6 @@ export function buildCity(G) {
   return G.world;
 }
 
-/** Sea shimmer + the casino sign's slow neon pulse. Cheap, every frame. */
 export function updateCity(G, dt) {
   if (!G.world) return;
   const t = G.time || 0;
@@ -473,7 +444,6 @@ export function buildSky(G) {
   glow.lookAt(0, 0, 0);
   group.add(glow);
 
-  // Flat white cloud blobs, three squashed spheres each.
   const cloudGeo = new THREE.SphereGeometry(1, 10, 8);
   const cloudMat = new THREE.MeshBasicMaterial({ color: 0xfff4e0, transparent: true, opacity: 0.85, fog: false });
   const clouds = [];
@@ -498,7 +468,6 @@ export function buildSky(G) {
   return G.sky;
 }
 
-/** Warm low sun with shadows + hemisphere fill, so the city reads at golden hour. */
 export function buildLights(G) {
   const scene = G.scene;
   const dir = SUN_POSITION.direction;
@@ -525,7 +494,6 @@ export function buildLights(G) {
   return G.lights;
 }
 
-/** Clouds drift slowly across the sunset; the sun stays low and warm. */
 export function updateSky(G, dt) {
   if (!G.sky) return;
   for (const cloud of G.sky.clouds) {
@@ -534,7 +502,6 @@ export function updateSky(G, dt) {
   }
 }
 
-/** Which district a world position is in (for the HUD location label). */
 export function districtAt(x, z) {
   if (x > GAME.seaX) return 'The Sea';
   for (const d of DISTRICTS) {

@@ -1,6 +1,3 @@
-// player.js — Isla Dorada V8: Wowo on foot.
-// Fresh code. Box-built hero (~1.9 units tall), WASD relative to camera,
-// mouse-drag steering, over-the-shoulder camera, E enter/exit car, jetpack.
 import * as THREE from 'three';
 import * as CFG from './config.js';
 
@@ -23,20 +20,15 @@ function buildWowo() {
   const skin = 0xc98d64;
   const jacket = 0xd94f3d; // Wowo's red casino-driver jacket
   const pants = 0x2b3440;
-  // Legs
   const legL = box(0.17, 0.78, 0.2, pants, -0.11, 0.39, 0);
   const legR = box(0.17, 0.78, 0.2, pants, 0.11, 0.39, 0);
-  // Torso + jacket details
   const torso = box(0.52, 0.62, 0.28, jacket, 0, 1.09, 0);
   const shirt = box(0.3, 0.5, 0.05, 0xe8e4da, 0, 1.1, 0.15);
-  // Arms
   const armL = box(0.14, 0.6, 0.16, jacket, -0.35, 1.08, 0);
   const armR = box(0.14, 0.6, 0.16, jacket, 0.35, 1.08, 0);
-  // Head + cap
   const head = box(0.3, 0.3, 0.28, skin, 0, 1.62, 0);
   const cap = box(0.34, 0.1, 0.32, 0x1d2b3a, 0, 1.8, 0);
   const brim = box(0.3, 0.05, 0.16, 0x1d2b3a, 0, 1.76, 0.2);
-  // Jetpack: two tanks + nozzle bar on the back
   const tankL = new THREE.Mesh(
     new THREE.CylinderGeometry(0.09, 0.09, 0.5, 10),
     new THREE.MeshLambertMaterial({ color: 0x8a94a6 }),
@@ -61,8 +53,6 @@ export function initPlayer(G) {
     nearCar: null,
     hurtFlash: 0, walkPhase: 0,
   };
-  // Starting ammo: Fists/Pistol infinite reserve, others starter mags.
-  // Ammo slots follow WEAPON_DEFS order (config slot 0 = Fists).
   player.ammo = {
     0: { mag: Infinity, reserve: Infinity },
     1: { mag: 12, reserve: 60 },
@@ -88,16 +78,10 @@ export function initPlayer(G) {
     }
   };
   G.player = player;
-  // Input is owned by main.js (the Input instance on G.input): this module
-  // reads G.input.keys / consumeMouse() and adds NO listeners of its own,
-  // so E (vehicle.js) and the mode keys (main.js) each have exactly one owner.
-  // Mouse look: pointer-lock deltas when locked, drag deltas while button 0
-  // is held; consumeMouse() drains every frame so deltas never accumulate.
   return player;
 }
 
 function collide(G, pos, radius) {
-  // Keep Wowo out of building AABBs supplied by world.js.
   const boxes = (G.world && G.world.colliders) || [];
   for (const b of boxes) {
     const minX = b.minX ?? b.x - (b.hx ?? b.w / 2);
@@ -105,7 +89,6 @@ function collide(G, pos, radius) {
     const minZ = b.minZ ?? b.z - (b.hz ?? b.d / 2);
     const maxZ = b.maxZ ?? b.z + (b.hz ?? b.d / 2);
     if (pos.x > minX - radius && pos.x < maxX + radius && pos.z > minZ - radius && pos.z < maxZ + radius) {
-      // Push out along the smallest penetration axis.
       const pushL = pos.x - (minX - radius);
       const pushR = (maxX + radius) - pos.x;
       const pushB = pos.z - (minZ - radius);
@@ -128,15 +111,11 @@ export function updatePlayer(G, dt) {
   const keys = (G.input && G.input.keys) || new Set();
 
   if (!P.onFoot) {
-    // In a car: hide the on-foot mesh, camera is owned by vehicle.js.
-    // (E enter/exit is owned by vehicle.js updateDriving, not here.)
     P.mesh.visible = false;
     return;
   }
   P.mesh.visible = true;
 
-  // Mouse look: pointer-lock deltas when locked, drag deltas while button 0
-  // is held. consumeMouse() drains every frame.
   if (G.input && G.input.consumeMouse) {
     const m = G.input.consumeMouse();
     const locked = G.input.mouse ? G.input.mouse.locked : false;
@@ -144,7 +123,6 @@ export function updatePlayer(G, dt) {
     if ((locked || dragging) && m.dx !== 0) P.heading -= m.dx * 0.0042;
   }
 
-  // WASD relative to camera yaw (camera sits behind the heading).
   let fx = 0;
   let fz = 0;
   if (keys.has('KeyW') || keys.has('ArrowUp')) fz -= 1;
@@ -160,14 +138,11 @@ export function updatePlayer(G, dt) {
     const nz = fz / len;
     const sin = Math.sin(P.heading);
     const cos = Math.cos(P.heading);
-    // Forward is -Z rotated by heading; right is +X rotated by heading.
     const wx = (-nz * sin + nx * cos);
     const wz = (-nz * cos - nx * sin);
     P.pos.x += wx * speed * dt;
     P.pos.z += wz * speed * dt;
     P.speed = speed;
-    // Face the movement direction while running: the model's visual facing
-    // is (sin heading, cos heading), so heading = atan2(wx, wz).
     const targetHeading = Math.atan2(wx, wz);
     let diff = targetHeading - P.heading;
     while (diff > Math.PI) diff -= Math.PI * 2;
@@ -179,7 +154,6 @@ export function updatePlayer(G, dt) {
     P.speed = 0;
   }
 
-  // --- jetpack ---------------------------------------------------------------
   const wantJet = keys.has('Space');
   if (wantJet && P.jetpack > 0) {
     P.vy = 7.5;
@@ -199,8 +173,6 @@ export function updatePlayer(G, dt) {
 
   collide(G, P.pos, 0.5);
 
-  // Nearest car for the E prompt: any traffic car, the hero car, or the car
-  // the player last drove (G.car may be a stolen traffic car by now).
   P.nearCar = null;
   let best = 3.2;
   const consider = (c) => {
@@ -212,7 +184,6 @@ export function updatePlayer(G, dt) {
   if (G.vehicle && G.vehicle.hero) consider(G.vehicle.hero);
   if (G.car) consider(G.car);
 
-  // Mesh pose + walk cycle.
   P.mesh.position.copy(P.pos);
   P.mesh.rotation.y = P.heading;
   const u = P.mesh.userData;
@@ -221,14 +192,10 @@ export function updatePlayer(G, dt) {
   u.legR.rotation.x = -swing;
   u.armL.rotation.x = -swing * 0.7;
   u.armR.rotation.x = swing * 0.7;
-  // Jetpack flame glow while thrusting.
   const thrusting = wantJet && P.jetpack > 0;
   u.tankL.material.emissive = new THREE.Color(thrusting ? 0xff7a1a : 0x000000);
   u.tankR.material.emissive = new THREE.Color(thrusting ? 0xff7a1a : 0x000000);
 
-  // --- over-the-shoulder camera ---------------------------------------------
-  // Camera sits BEHIND the hero (opposite his facing) and looks forward past
-  // him, so W walks away from the camera and we see his back.
   const cam = G.camera;
   if (cam && (G.mode === 'play' || G.mode === undefined)) {
     const behind = 3.2;

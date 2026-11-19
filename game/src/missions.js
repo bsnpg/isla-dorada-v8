@@ -1,7 +1,3 @@
-// missions.js — Isla Dorada V8: the 8-job "Bersihkan Nama" story arc.
-// Fresh code and fresh dialogue (same characters, new lines). Each job has
-// 2-3 stages: reach a beacon, chase a target, defeat gunmen, reach a point.
-// Completion pays cash + REP and unlocks the next job.
 import * as THREE from 'three';
 import * as CFG from './config.js';
 import { spawnGunmen } from './combat.js';
@@ -19,8 +15,6 @@ const FALLBACK_MISSIONS = [
 ];
 const MISSION_DEFS = (CFG.MISSIONS && CFG.MISSIONS.length >= 8) ? CFG.MISSIONS : FALLBACK_MISSIONS;
 
-// Stage locations around the island (x, z). Every spot sits on a road or in a
-// kept-clear plaza, never inside a building block, so each stage is reachable.
 const SPOTS = {
   dock: new THREE.Vector3(120, 0, 150),
   market: new THREE.Vector3(-120, 0, 120),
@@ -196,7 +190,6 @@ function setupStage(G) {
   M.stageTimer = st.timeLimit || 0;
   M.stageProgress = 0;
   M.target = null;
-  // Beacon for reach/chase stages.
   if (st.kind === 'reach') {
     M.beacon.visible = true;
     M.beacon.position.copy(st.spot);
@@ -214,7 +207,6 @@ function setupStage(G) {
     M.targetCar.position.copy(st.spot);
     M.targetHp = 100;
     M.chaseHold = 0;
-    // The courier is a traffic car flagged as the mission target.
     const courier = {
       mesh: M.targetCar, pos: st.spot.clone(), line: { axis: 'x', at: st.spot.z },
       dir: 1, speed: 11, baseSpeed: 11, isTarget: true, hp: 100,
@@ -260,7 +252,6 @@ function completeJob(G) {
   if (G.hud && G.hud.showDialogue) G.hud.showDialogue(G, speaker, text);
   if (G.hud && G.hud.flashToast) G.hud.flashToast(G, `${job.name} complete — +$${payout} · +${rep} REP`);
   if (G.audio && G.audio.playSting) G.audio.playSting();
-  // Heat cools off between jobs.
   setWanted(G, Math.max(0, (G.wanted || 0) - 1));
 }
 
@@ -291,7 +282,6 @@ export function updateMissions(G, dt) {
     M.stageTimer -= dt;
     if (M.stageTimer <= 0) { failJob(G, 'time ran out'); return; }
   }
-  // Beacon pulse.
   if (M.beacon.visible) {
     const s = 1 + Math.sin((G.time || 0) * 4) * 0.12;
     M.beacon.scale.set(s, 1, s);
@@ -311,7 +301,6 @@ export function updateMissions(G, dt) {
   } else if (st.kind === 'chase') {
     const t = M.target;
     if (!t) { completeStage(G); return; }
-    // Courier drives away along the road; the player must hold close range.
     t.pos.x += t.dir * t.speed * dt;
     if (t.pos.x > 150) t.dir = -1;
     if (t.pos.x < -150) t.dir = 1;
@@ -323,7 +312,6 @@ export function updateMissions(G, dt) {
     );
     if (d < 10) {
       M.chaseHold += dt;
-      // Ramming wears the courier down.
       if (d < 4 && G.car && !G.player.onFoot) {
         t.hp -= 30 * dt;
         if (G.combat) G.combat.shake = Math.max(G.combat.shake, 0.3);

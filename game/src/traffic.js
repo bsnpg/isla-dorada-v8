@@ -1,6 +1,3 @@
-// traffic.js — Isla Dorada V8: ambient traffic cars + pedestrians.
-// Fresh code. Cars run waypoint loops on the road grid; pedestrians walk the
-// sidewalks and FLEE from gunfire, explosions and wanted heat.
 import * as THREE from 'three';
 import * as CFG from './config.js';
 
@@ -62,7 +59,6 @@ function makePedestrian(shirt) {
   return g;
 }
 
-// Road centrelines for the default grid; the sibling's world may supply its own.
 function gridLines() {
   const lines = [];
   for (let v = -GRID.half; v <= GRID.half; v += GRID.spacing) {
@@ -76,9 +72,6 @@ export function initTraffic(G) {
   const scene = G.scene;
   const lines = (G.world && G.world.roads) || gridLines();
   const cars = [];
-  // Traffic cars are stealable (E), so each one carries the fields driving
-  // needs: a VEHICLES def (cycled sedan/taxi/van/muscle), heading, damage,
-  // and the wheel/smoke slots updateDriving touches.
   const CAR_DEFS = ['sedan', 'taxi', 'van', 'muscle'];
   for (let i = 0; i < 14; i += 1) {
     const mesh = makeTrafficCar(CAR_COLORS[i % CAR_COLORS.length]);
@@ -131,7 +124,6 @@ function carAheadBlocked(G, car, look) {
     if (d.length() > look || d.length() < 0.5) continue;
     if (d.dot(forward) > 0.7) return true;
   }
-  // Do not drive through the hero (on foot or in a car).
   const hero = G.player && G.player.pos;
   if (hero) {
     const d = new THREE.Vector3().subVectors(hero, p);
@@ -156,8 +148,6 @@ export function updateTraffic(G, dt) {
   for (const car of T.cars) {
     if (car.isTarget) continue; // mission-owned target cars are driven by missions.js
     if (car === G.car && G.player && !G.player.onFoot) {
-      // The player is driving this car: driving owns pos/heading, traffic
-      // only syncs the mesh — never auto-drive it along its line.
       car.mesh.position.copy(car.pos);
       car.mesh.rotation.y = car.heading;
       continue;
@@ -188,7 +178,6 @@ export function updateTraffic(G, dt) {
       ped.fleeing = true;
       ped.fleeTimer = 2 + Math.random() * 3;
       ped.fleeDir.copy(toPlayer.normalize());
-      // Flee along the sidewalk axis so peds scatter down the street, not into walls.
       if (Math.abs(ped.fleeDir.x) > Math.abs(ped.fleeDir.z)) ped.fleeDir.z = 0;
       else ped.fleeDir.x = 0;
       ped.fleeDir.normalize();
@@ -212,11 +201,9 @@ export function updateTraffic(G, dt) {
         ped.mesh.rotation.y = ped.dir > 0 ? 0 : Math.PI;
       }
     }
-    // Keep peds inside the island.
     ped.pos.x = Math.max(-GRID.half, Math.min(GRID.half, ped.pos.x));
     ped.pos.z = Math.max(-GRID.half, Math.min(GRID.half, ped.pos.z));
     ped.mesh.position.copy(ped.pos);
-    // Walk-cycle swing.
     const u = ped.mesh.userData;
     const swing = Math.sin((G.time || 0) * (ped.fleeing ? 11 : 6) + u.phase) * (ped.fleeing ? 0.7 : 0.45);
     u.legL.rotation.x = swing;

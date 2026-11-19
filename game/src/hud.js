@@ -1,7 +1,3 @@
-// hud.js — Isla Dorada V8: the full in-game HUD.
-// Fresh CSS + DOM, built at runtime under #hud-root. Dense designed HUD:
-// mission panel, IDPD response list, money/wanted/clock, rank bar, weapon
-// slots, crew cards, circular minimap, vitals, speed, dialogue, crosshair.
 import * as CFG from './config.js';
 import { WEAPON_DEFS } from './combat.js';
 
@@ -27,12 +23,15 @@ const CSS = `
 #hud-rank{margin-top:4px;font-size:12px}
 #hud-rankbar{height:8px;background:rgba(255,255,255,.18);border-radius:4px;overflow:hidden;margin-top:2px}
 #hud-rankfill{height:100%;background:linear-gradient(90deg,#ffd34d,#ff8c2a);width:0%}
-#hud-weapons{position:absolute;top:168px;right:12px;display:flex;gap:6px}
-#hud-weapons .slot{width:64px;text-align:center;background:rgba(20,16,12,.72);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:5px 2px;font-size:11px}
-#hud-weapons .slot.on{border-color:#ffd34d;box-shadow:0 0 0 2px rgba(255,211,77,.5)}
+#hud-weapons{position:absolute;top:156px;right:12px;width:160px;height:160px}
+#hud-weapons .wheel{position:absolute;inset:0;border-radius:50%;background:rgba(20,16,12,.6);border:1px solid rgba(255,211,77,.35)}
+#hud-weapons .slot{position:absolute;left:50%;top:50%;width:52px;margin:-20px 0 0 -26px;text-align:center;background:rgba(20,16,12,.85);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:4px 1px;font-size:9px}
+#hud-weapons .slot.on{border-color:#ffd34d;box-shadow:0 0 0 2px rgba(255,211,77,.5);background:rgba(255,211,77,.2)}
 #hud-weapons .slot .k{color:#ffd34d;font-weight:800}
-#hud-weapons .slot .ammo{font-size:12px;font-weight:700}
-#hud-crew{position:absolute;top:256px;right:12px;width:210px;display:flex;flex-direction:column;gap:6px}
+#hud-weapons .slot .ammo{font-size:11px;font-weight:700}
+#hud-weapons .hub{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(20,16,12,.9);border:1px solid rgba(255,211,77,.5);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;text-align:center}
+#hud-weapons .hub b{font-size:11px;color:#ffd34d}
+#hud-crew{position:absolute;top:326px;right:12px;width:210px;display:flex;flex-direction:column;gap:6px}
 #hud-crew .card{display:flex;gap:8px;align-items:center;background:rgba(20,16,12,.72);border:1px solid rgba(94,234,212,.35);border-radius:10px;padding:6px 8px}
 #hud-crew .card.ready{border-color:#5eead4}
 #hud-crew .card.cd{opacity:.55}
@@ -116,12 +115,20 @@ export function initHUD(G) {
   const tr = el('div'); tr.id = 'hud-tr';
   tr.innerHTML = `<div id="hud-money">$0</div><div id="hud-clock">18:00</div><div id="hud-stars"></div><div id="hud-rank"><span id="hud-rankname">ROOKIE</span> · <span id="hud-rep">0 RP</span><div id="hud-rankbar"><div id="hud-rankfill"></div></div></div>`;
   const weapons = el('div'); weapons.id = 'hud-weapons';
+  const wheel = el('div', 'wheel');
+  weapons.appendChild(wheel);
   WEAPON_DEFS.forEach((w, i) => {
     const s = el('div', 'slot');
     s.id = `hud-wslot-${i}`;
+    const a = i * 60 - 90; // 6 weapons around the circle, first at the top
+    s.style.transform = `rotate(${a}deg) translateY(-58px) rotate(${-a}deg)`;
     s.innerHTML = `<div class="k">${i + 1}</div><div>${w.name.toUpperCase()}</div><div class="ammo">—</div>`;
     weapons.appendChild(s);
   });
+  const hub = el('div', 'hub');
+  hub.id = 'hud-wheel-hub';
+  hub.innerHTML = `<b>—</b><span>—</span>`;
+  weapons.appendChild(hub);
   const crew = el('div'); crew.id = 'hud-crew';
   CREW.forEach((c) => {
     const card = el('div', 'card ready');
@@ -158,13 +165,11 @@ export function initHUD(G) {
     _mmTick: 0,
   };
   G.hud = state;
-  // Attach the helpers other modules call as G.hud.flashToast / showDialogue.
   state.flashToast = (g, text) => flashToast(g, text);
   state.showDialogue = (g, speaker, text) => showDialogue(g, speaker, text);
   state.renderHUD = (g) => renderHUD(g);
   G.crew = G.crew || { mara: { cd: 0 }, rico: { cd: 0 }, kiko: { cd: 0 } };
 
-  // Crew abilities: Z / X / C.
   window.addEventListener('keydown', (e) => {
     if ((G.mode !== 'play' && G.mode !== undefined) || e.repeat) return;
     const key = e.code;
@@ -228,11 +233,9 @@ function drawMinimap(G) {
   ctx.save();
   ctx.beginPath(); ctx.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2); ctx.clip();
   ctx.fillStyle = '#1a2b3a'; ctx.fillRect(0, 0, S, S);
-  // Sea + land block.
   ctx.fillStyle = '#24404f'; ctx.fillRect(0, 0, S, S);
   ctx.fillStyle = '#3a4a3a';
   const toMap = (x, z) => [S / 2 + ((x - px.x) / R) * S, S / 2 + ((z - px.z) / R) * S];
-  // Roads: the real centrelines (N-S roads at x -160..150, E-W at z -160..160).
   ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.lineWidth = 2;
   for (const v of [-160, -120, -80, -40, 0, 40, 80, 120, 150]) {
     const [ax, ay] = toMap(v, -200);
@@ -244,7 +247,6 @@ function drawMinimap(G) {
     const [dx, dy] = toMap(215, v);
     ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(dx, dy); ctx.stroke();
   }
-  // Mission beacon.
   if (G.missions && G.missions.current) {
     const st = G.missions.current.stages[G.missions.stageIndex];
     const spot = st && st.spot;
@@ -255,11 +257,9 @@ function drawMinimap(G) {
       ctx.strokeStyle = '#ffd34d'; ctx.beginPath(); ctx.arc(mx, my, 9, 0, Math.PI * 2); ctx.stroke();
     }
   }
-  // Police dots.
   if (G.police) {
     ctx.fillStyle = '#ff5a4a';
     for (const u of G.police.units || []) {
-      // Units carry no world pos here; approximate from distance ring — skip if unknown.
     }
     for (const car of G.police.cars || []) {
       if (!car.active) continue;
@@ -268,14 +268,12 @@ function drawMinimap(G) {
       ctx.beginPath(); ctx.arc(mx, my, 3.5, 0, Math.PI * 2); ctx.fill();
     }
   }
-  // Player arrow (centre, rotated by heading).
   ctx.save();
   ctx.translate(S / 2, S / 2);
   ctx.rotate((G.player ? G.player.heading : 0) + Math.PI);
   ctx.fillStyle = '#f2ede4';
   ctx.beginPath(); ctx.moveTo(0, -7); ctx.lineTo(5, 6); ctx.lineTo(-5, 6); ctx.closePath(); ctx.fill();
   ctx.restore();
-  // North tick.
   ctx.fillStyle = '#f2ede4'; ctx.font = 'bold 11px sans-serif'; ctx.fillText('N', S / 2 - 4, 12);
   ctx.restore();
 }
@@ -299,7 +297,6 @@ export function renderHUD(G) {
     }
   }
 
-  // Money / clock / stars / rank.
   setText(H, 'money', H.tr.querySelector('#hud-money'), `$${Math.floor(G.money || 0).toLocaleString('en-US')}`);
   const hours = 18 + Math.floor((G.time || 0) / 3600);
   const mins = Math.floor(((G.time || 0) % 3600) / 60);
@@ -318,7 +315,6 @@ export function renderHUD(G) {
   const pct = Math.max(0, Math.min(100, ((rep - prevAt) / Math.max(1, nextAt - prevAt)) * 100));
   if (H._cache.rankfill !== pct) { H._cache.rankfill = pct; fill.style.width = `${pct}%`; }
 
-  // Mission panel.
   const M = G.missions;
   if (M && M.current) {
     const job = M.current;
@@ -331,14 +327,12 @@ export function renderHUD(G) {
     if (H._cache.mission !== html) { H._cache.mission = html; H.mission.innerHTML = html; }
   }
 
-  // IDPD response list.
   const units = (G.police && G.police.units) || [];
   const pHtml = units.length === 0
     ? `<h3>IDPD RESPONSE</h3><div class="units">No units responding</div>`
     : `<h3>IDPD RESPONSE · ${units.length} UNIT${units.length > 1 ? 'S' : ''}</h3>` + units.slice(0, 6).map((u) => `<div class="unit"><span>${u.id}</span><span class="st">${u.status}</span><span>${u.dist} m</span></div>`).join('') + (units.length > 6 ? `<div class="unit"><span>+${units.length - 6} more</span></div>` : '');
   if (H._cache.police !== pHtml) { H._cache.police = pHtml; H.police.innerHTML = pHtml; }
 
-  // Weapon slots.
   WEAPON_DEFS.forEach((w, i) => {
     const slot = document.getElementById(`hud-wslot-${i}`);
     if (!slot) return;
@@ -351,8 +345,19 @@ export function renderHUD(G) {
       slot.querySelector('.ammo').textContent = ammoTxt;
     }
   });
+  const hubEl = document.getElementById('hud-wheel-hub');
+  if (hubEl && G.player) {
+    const w = WEAPON_DEFS[G.player.weapon];
+    const ammo = G.player.ammo ? G.player.ammo[G.player.weapon] : null;
+    const hubTxt = w ? `${w.name.toUpperCase()}|${!ammo ? '—' : ammo.mag === Infinity ? '∞' : `${ammo.mag}/${ammo.reserve}`}` : '';
+    if (H._cache.wheelhub !== hubTxt) {
+      H._cache.wheelhub = hubTxt;
+      const [n, a] = hubTxt.split('|');
+      hubEl.querySelector('b').textContent = n;
+      hubEl.querySelector('span').textContent = a;
+    }
+  }
 
-  // District + vitals + jetpack.
   const px = G.player ? G.player.pos.x : 0;
   const pz = G.player ? G.player.pos.z : 0;
   const dName = districtAt(G, px, pz);
@@ -372,7 +377,6 @@ export function renderHUD(G) {
   const jetPct = G.player ? Math.round(G.player.jetpack) : 100;
   if (H._cache.jet !== jetPct) { H._cache.jet = jetPct; jetFill.style.width = `${jetPct}%`; }
 
-  // Speed / vehicle / radio.
   const inCar = G.player && !G.player.onFoot && G.car;
   const kmh = inCar ? Math.round(Math.abs(G.car.speed || 0) * 3.6) : Math.round(Math.abs((G.player && G.player.speed) || 0) * 3.6);
   setText(H, 'speed', H.speed.querySelector('.num'), String(kmh));
@@ -382,8 +386,6 @@ export function renderHUD(G) {
   const radio = (CFG.RADIO && (CFG.RADIO.name || CFG.RADIO.station)) || 'RADIO SOL 92.5';
   setText(H, 'radio', H.speed.querySelector('.radio'), `♪ ${radio}`);
 
-  // Crosshair on foot only; E prompt near a car, or to leave a parked car.
-  // No "leave" prompt at speed — nobody bails out at 110 km/h.
   H.cross.style.display = (G.player && G.player.onFoot && (G.mode === 'play' || G.mode === undefined)) ? 'block' : 'none';
   if (G.player && G.player.onFoot && G.player.nearCar) {
     H.prompt.style.display = 'block';
@@ -395,7 +397,6 @@ export function renderHUD(G) {
     H.prompt.style.display = 'none';
   }
 
-  // Minimap at ~10 Hz.
   H._mmTick += 1;
   if (H._mmTick % 6 === 0) drawMinimap(G);
 }

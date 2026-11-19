@@ -1,6 +1,3 @@
-// police.js — Isla Dorada V8: IDPD wanted system.
-// Fresh code. Wanted 0-5 stars; patrol cars (PURSUIT / RAMMING / FLANKING /
-// EN ROUTE / RESPONDING / PARKED), foot units, and a searchlight helicopter.
 import * as THREE from 'three';
 import * as CFG from './config.js';
 
@@ -76,7 +73,6 @@ function makeHeli() {
   const rotor = box(5.4, 0.08, 0.3, 0x14161a, 0, 1.15, 0);
   const tail = box(0.3, 0.3, 2.6, 0x22303c, 0, 0.1, -2.2);
   g.add(rotor, tail);
-  // Searchlight cone (front-facing, open sky) + spot light.
   const coneGeo = new THREE.ConeGeometry(2.6, 14, 16, 1, true);
   const coneMat = new THREE.MeshBasicMaterial({
     color: 0xfff6c8, transparent: true, opacity: 0.16,
@@ -201,7 +197,6 @@ export function updatePolice(G, dt) {
   const target = heroTargetPos(G);
   const heroSpeed = (G.car && !G.player.onFoot) ? (G.car.speed || 0) : (G.player ? G.player.speed : 0);
 
-  // Passive heat decay when the player stays out of trouble.
   P.cooldown -= dt;
   if (wanted > 0 && P.cooldown <= 0 && heroSpeed < 2 && !(G.combat && (G.time - G.combat.lastShotAt) < 5)) {
     P.cooldown = 8;
@@ -214,8 +209,6 @@ export function updatePolice(G, dt) {
     const to = new THREE.Vector3().subVectors(target, u.pos);
     to.y = 0;
     const dist = to.length();
-    // State machine: far = EN ROUTE, mid = PURSUIT, close = RAMMING,
-    // one unit peels off to FLANKING when the hero is fast.
     const flank = heroSpeed > 14 && u === P.cars[1];
     if (dist > 45) u.status = 'EN ROUTE';
     else if (flank) u.status = 'FLANKING';
@@ -224,8 +217,6 @@ export function updatePolice(G, dt) {
     const chaseSpeed = u.status === 'RAMMING' ? 19 : u.status === 'FLANKING' ? 17 : 15;
     let dir = to.normalize();
     if (u.status === 'FLANKING') {
-      // Aim at a point ahead of the hero to cut them off (hero's facing is
-      // (sin heading, cos heading), as in driving and on-foot movement).
       const ahead = target.clone().addScaledVector(
         new THREE.Vector3(Math.sin(G.player?.heading || 0), 0, Math.cos(G.player?.heading || 0)), 12,
       );
@@ -235,11 +226,9 @@ export function updatePolice(G, dt) {
     u.pos.addScaledVector(dir, chaseSpeed * dt);
     u.mesh.position.copy(u.pos);
     u.mesh.rotation.y = u.heading;
-    // Flash the light bar.
     const blink = Math.floor((G.time || 0) * 6) % 2 === 0;
     u.mesh.userData.red.material.color.setHex(blink ? 0xff2a1e : 0x551111);
     u.mesh.userData.blue.material.color.setHex(blink ? 0x223366 : 0x2a6bff);
-    // Ram: contact damages the hero car / Wowo and shakes the camera.
     if (dist < 3.4) {
       if (G.car && !G.player.onFoot && G.car.damage !== undefined) {
         G.car.damage = Math.min(100, (G.car.damage || 0) + 6);
@@ -247,7 +236,6 @@ export function updatePolice(G, dt) {
         G.player.hurt(8);
       }
       if (G.combat) G.combat.shake = Math.max(G.combat.shake, 0.5);
-      // Bounce the police car back so it does not stick inside the hero.
       u.pos.addScaledVector(dir, -4 * dt * 10);
     }
     units.push({ id: u.id, dist: Math.round(dist), status: u.status, kind: 'car' });
@@ -282,7 +270,6 @@ export function updatePolice(G, dt) {
     P.heli.mesh.position.copy(P.heli.pos);
     P.heli.mesh.rotation.y = Math.atan2(target.x - hx, target.z - hz);
     P.heli.mesh.userData.rotor.rotation.y += dt * 22;
-    // Searchlight tracks the hero.
     const spot = P.heli.mesh.userData.spot;
     spot.target.position.set(target.x - hx, -24, target.z - hz);
     units.push({ id: 'KITE-1', dist: Math.round(Math.hypot(hx - target.x, hz - target.z)), status: 'AIR UNIT', kind: 'heli' });

@@ -1,7 +1,3 @@
-// screens.js — Isla Dorada V8: title, map/stats, garage, pause, dead screens.
-// Fresh CSS + DOM under #screens-root. Title has a live 3D city panorama
-// behind it (updateScreens orbits the camera at sunset); map is a rich
-// 3-column layout (completion, map, career); garage shows the hero car.
 import * as CFG from './config.js';
 import { saveGame, loadGame, hasSave } from './save.js';
 
@@ -28,12 +24,6 @@ const CSS = `
 #screens-root .cols{display:grid;grid-template-columns:280px 1fr 300px;gap:18px;height:100%}
 #screens-root .col{background:rgba(20,16,12,.82);border:1px solid rgba(255,211,77,.25);border-radius:12px;padding:14px;overflow:auto}
 #screens-root .col h2{margin:0 0 10px;font-size:18px;letter-spacing:1px;color:#ffd34d}
-#screens-root .ring{width:150px;height:150px;margin:0 auto;position:relative}
-#screens-root .ring svg{transform:rotate(-90deg)}
-#screens-root .ring .pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900}
-#screens-root .check{font-size:13px;line-height:1.9}
-#screens-root .check .bar{display:inline-block;width:90px;height:7px;background:rgba(255,255,255,.18);border-radius:3px;vertical-align:middle;margin-left:6px}
-#screens-root .check .bar i{display:block;height:100%;background:#2ec46a;border-radius:3px}
 #screens-root .statgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px}
 #screens-root .statgrid b{font-size:20px;display:block;color:#5eead4}
 #screens-root .btn{background:#ff5a3c;color:#fff;border:0;border-radius:8px;padding:8px 16px;font-weight:800;cursor:pointer;font-size:14px}
@@ -46,6 +36,22 @@ const CSS = `
 #screens-root .upg.owned{border:1px solid #2ec46a}
 #screens-root .controls-list{font-size:13px;line-height:1.8;columns:2}
 #screens-root .dead-title{font-size:64px;font-weight:900;color:#ff5a3c}
+#screens-root .joblist{font-size:12px;line-height:1.6}
+#screens-root #screen-map .col h2{margin:0 0 6px;font-size:16px}
+#screens-root .joblist .done{color:#2ec46a}
+#screens-root .joblist .cur{color:#ffd34d;font-weight:800}
+#screens-root .joblist .pay{color:#5eead4;float:right}
+#screens-root .legend{font-size:10px;line-height:1.5;columns:3}
+#screens-root #screen-map .bar{margin:2px 0 4px}
+#screens-root #screen-map .inner{padding:10px 24px}
+#screens-root #screen-map .tabs{margin-bottom:8px}
+#screens-root #screen-map .col{padding:12px}
+#screens-root .skillrow{display:flex;justify-content:space-between;font-size:12px;padding:1px 0}
+#screens-root .skillrow .bonus{color:#5eead4}
+#screens-root .bar{height:8px;background:rgba(255,255,255,.18);border-radius:4px;overflow:hidden;margin:3px 0 8px}
+#screens-root .bar i{display:block;height:100%;background:#ffd34d;border-radius:4px}
+#screens-root .jobbox{background:rgba(255,211,77,.1);border:1px solid rgba(255,211,77,.4);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.5}
+#screens-root .jobbox b{color:#ffd34d}
 `;
 
 const CHARS = [
@@ -91,7 +97,6 @@ export function initScreens(G) {
   style.textContent = CSS;
   document.head.appendChild(style);
 
-  // ---- TITLE ---------------------------------------------------------------
   const title = el('div', 'screen'); title.id = 'screen-title';
   title.innerHTML = `<div class="scrim"></div><div class="inner">
     <h1 class="logo">ISLA<br>DORADA</h1>
@@ -111,18 +116,16 @@ export function initScreens(G) {
     </div>
   </div>`;
 
-  // ---- MAP / STATS ---------------------------------------------------------
   const map = el('div', 'screen'); map.id = 'screen-map';
-  map.innerHTML = `<div class="scrim"></div><div class="inner">
+  map.innerHTML = `<div class="scrim"></div><div class="inner" style="padding:14px 24px">
     <div class="tabs"><span class="on">MAP</span><span>STORY</span><span>STATS</span><span>CREW</span><span>SAVE</span><span id="map-close" style="margin-left:auto;cursor:pointer">✕ CLOSE (M)</span></div>
-    <div class="cols">
-      <div class="col"><h2>COMPLETION</h2><div class="ring" id="map-ring"></div><div class="check" id="map-check"></div><h2 style="margin-top:14px">MISSION RATINGS</h2><div id="map-ratings"></div></div>
-      <div class="col"><h2>ISLA DORADA — MAP</h2><canvas id="map-canvas" width="640" height="460"></canvas><div style="font-size:12px;color:#c9b98a;margin-top:6px">Click the map to set a waypoint · Gold markers are job beacons</div></div>
-      <div class="col"><h2 id="map-rank">RANK</h2><div class="statgrid" id="map-stats"></div><h2 style="margin-top:14px">SAVE SLOTS</h2><div id="map-slots"></div></div>
+    <div class="cols" style="grid-template-columns:600px 1fr 300px">
+      <div class="col"><h2>ISLA DORADA — CITY MAP</h2><canvas id="map-canvas" width="560" height="430"></canvas><div style="font-size:12px;color:#c9b98a;margin-top:6px">Click the map to set a waypoint · Gold markers are job beacons</div></div>
+      <div class="col"><h2>CURRENT JOB</h2><div id="map-job"></div><h2 style="margin-top:12px">JOBS</h2><div id="map-jobs" class="joblist"></div><h2 style="margin-top:12px">CAREER</h2><div class="statgrid" id="map-career"></div><h2 style="margin-top:12px">LEGEND</h2><div id="map-legend" class="legend"></div></div>
+      <div class="col"><h2>COLLECTIBLES — DORADA IDOLS</h2><div id="map-collect"></div><h2 style="margin-top:12px">SKILLS</h2><div id="map-skills"></div><h2 style="margin-top:12px">PROPERTIES</h2><div id="map-props"></div><h2 style="margin-top:12px">GARAGE</h2><div id="map-garage"></div><h2 style="margin-top:12px">SAVE SLOTS</h2><div id="map-slots"></div></div>
     </div>
   </div>`;
 
-  // ---- GARAGE ---------------------------------------------------------------
   const garage = el('div', 'screen'); garage.id = 'screen-garage';
   garage.innerHTML = `<div class="scrim"></div><div class="inner">
     <h1 style="font-size:40px;margin:0">RICO'S GARAGE</h1>
@@ -132,7 +135,6 @@ export function initScreens(G) {
     <button class="btn ghost" id="garage-close" style="margin-top:10px">CLOSE (G)</button>
   </div>`;
 
-  // ---- PAUSE ----------------------------------------------------------------
   const pause = el('div', 'screen'); pause.id = 'screen-pause';
   pause.innerHTML = `<div class="scrim"></div><div class="inner" style="text-align:center;padding-top:18vh">
     <h1 style="font-size:56px;margin:0">PAUSED</h1>
@@ -141,7 +143,6 @@ export function initScreens(G) {
     <button class="btn ghost" id="btn-quit-title">SAVE &amp; TITLE</button>
   </div>`;
 
-  // ---- DEAD -----------------------------------------------------------------
   const dead = el('div', 'screen'); dead.id = 'screen-dead';
   dead.innerHTML = `<div class="scrim"></div><div class="inner" style="text-align:center;padding-top:18vh">
     <div class="dead-title">BUSTED</div>
@@ -167,21 +168,16 @@ export function initScreens(G) {
   S.showDead = (g) => { showOnly(dead); /* G.mode already 'dead' */ };
   S.hideAll = () => showOnly(null);
 
-  // Buttons wire to mode changes (main.js owns the mode machine; we only
-  // show/hide screens and set G.mode).
   title.querySelector('#btn-continue').addEventListener('click', () => {
     if (hasSave()) loadGame(G);
     showOnly(null);
     G.mode = 'play';
-    // A fresh run with no jobs done starts Job 1; a loaded run resumes free
-    // roam (its current job is picked up from the map).
     if (G.missions && !G.missions.current && (G.missions.done || []).length === 0) G.startMission(1);
   });
   title.querySelector('#btn-new').addEventListener('click', () => {
     showOnly(null);
     G.mode = 'play';
     if (G.missions && G.missions.jobs) {
-      // Fresh run: reset the story state, keep the world.
       G.money = 500; G.rep = 0; G.health = 100; G.armour = 0;
       G.missions.done = []; G.missions.unlocked = 1; G.missions.current = null;
     }
@@ -205,11 +201,9 @@ export function initScreens(G) {
   });
   dead.querySelector('#btn-dead-title').addEventListener('click', () => S.showTitle(G));
 
-  // Map canvas click sets a waypoint.
   const mc = map.querySelector('#map-canvas');
   mc.addEventListener('click', (e) => {
     const r = mc.getBoundingClientRect();
-    // Real world bounds: x -200..215, z -200..200.
     const x = ((e.clientX - r.left) / r.width) * 415 - 200;
     const z = ((e.clientY - r.top) / r.height) * 400 - 200;
     G.waypoint = { x, z };
@@ -217,9 +211,6 @@ export function initScreens(G) {
     refreshMap(G);
   });
 
-  // Keyboard: NONE here. main.js owns every mode key (Enter/Space, Esc/P,
-  // M, G); screens only render from G.mode and button clicks, so a press
-  // can never toggle a screen twice.
 
   function refreshTitleSlots(g) {
     const slot = title.querySelector('#title-slots');
@@ -230,37 +221,88 @@ export function initScreens(G) {
       + `<div class="slot"><b>SLOT 2 · EMPTY</b></div><div class="slot"><b>SLOT 3 · EMPTY</b></div>`;
   }
 
+  const SKILL_BONUS = { Driving: '+12% top speed', Aim: '+10% damage', Influence: '+5% payout', Stamina: '+20 max HP', Stealth: '-10% detection', 'Street Sense': '+10% cash' };
+  const LANDMARKS = [
+    ['CASINO DORADA', 0, -65, '#ffd34d'], ['IDPD STATION', 40, -40, '#9fd8ff'],
+    ['GAS STATION', 20, 20, '#ff8c42'], ['FERRIS WHEEL', -160, 40, '#ffd34d'],
+    ['BOARDWALK', -170, 70, '#5eead4'], ['BEACH', 165, 60, '#f0d49a'],
+    ['IMPOUND', -100, 60, '#ff8c6a'], ['RESTAURANT', -60, 80, '#ff8c6a'],
+    ['GARAGE', 40, 80, '#c9b98a'], ['MARINA', 100, 140, '#5eead4'],
+    ['WAREHOUSE', 40, 140, '#ff8c42'], ['HARBOR', 0, 160, '#9fd8ff'],
+    ['CAUSEWAY', 0, -180, '#ff5a3c'],
+  ];
+
   function refreshMap(g) {
     const pct = completionPct(g);
-    const ring = map.querySelector('#map-ring');
-    const circ = 2 * Math.PI * 65;
-    ring.innerHTML = `<svg width="150" height="150"><circle cx="75" cy="75" r="65" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="12"/><circle cx="75" cy="75" r="65" fill="none" stroke="#ffd34d" stroke-width="12" stroke-dasharray="${(pct / 100) * circ} ${circ}" stroke-linecap="round"/></svg><div class="pct" style="flex-direction:column">${pct}%<span style="font-size:11px;color:#c9b98a">COMPLETE</span></div>`;
-    const done = (g.missions && g.missions.done.length) || 0;
-    const idols = (g.progression && g.progression.idolsFound) || 0;
-    const races = (g.progression && g.progression.racesWon) || 0;
-    const bar = (v, max) => `<span class="bar"><i style="width:${Math.min(100, (v / max) * 100)}%"></i></span>`;
-    map.querySelector('#map-check').innerHTML = `
-      ☐ Story missions ${bar(done, 8)} ${done}/8<br>
-      ☐ Dorada Idols ${bar(idols, 20)} ${idols}/20<br>
-      ☐ Street races won ${bar(races, 4)} ${races}/4<br>
-      ☐ Crew recruited ${bar(3, 3)} 3/3<br>
-      ☐ Districts explored ${bar((g.progression && g.progression.districtsSeen) || 1, 6)} ${(g.progression && g.progression.districtsSeen) || 1}/6`;
-    map.querySelector('#map-ratings').innerHTML = (g.missions ? g.missions.jobs.map((j) => {
-      const r = (g.missions.ratings && g.missions.ratings[j.n]) || '—';
-      return `<span style="display:inline-block;width:34px;height:34px;border-radius:50%;border:2px solid #ffd34d;text-align:center;line-height:30px;margin:2px;font-weight:800">${r === '—' ? j.n : r[0]}</span>`;
-    }).join('') : '');
-    map.querySelector('#map-rank').textContent = `RANK · ${(g.progression && g.progression.rankName) || 'ROOKIE'}`;
+    const M = g.missions || {};
     const P = g.progression || {};
-    map.querySelector('#map-stats').innerHTML = `
-      <div><b>${Math.floor(g.money || 0).toLocaleString('en-US')}</b>CASH ($)</div>
-      <div><b>${Math.floor(g.rep || 0).toLocaleString('en-US')}</b>REP</div>
+    const done = M.done || [];
+    const cur = M.current;
+    const jobEl = map.querySelector('#map-job');
+    if (cur) {
+      const def = (CFG.MISSIONS && CFG.MISSIONS[cur.n - 1]) || {};
+      const st = cur.stages[M.stageIndex];
+      const d = st && st.spot && g.player ? Math.round(Math.hypot(st.spot.x - g.player.pos.x, st.spot.z - g.player.pos.z)) : 0;
+      const obj = (def.objective || '').slice(0, 85);
+      jobEl.innerHTML = `<div class="jobbox"><b>JOB ${cur.n} — ${cur.name}</b><br>${obj}${(def.objective || '').length > 85 ? '…' : ''}<br>STAGE ${M.stageIndex + 1}/${cur.stages.length} · GPS ${d} m · PAYOUT $${(def.payout || 0).toLocaleString('en-US')}</div>`;
+    } else {
+      jobEl.innerHTML = `<div class="jobbox">No active job — pick one from the list.</div>`;
+    }
+    map.querySelector('#map-jobs').innerHTML = (M.jobs || []).map((j) => {
+      const def = (CFG.MISSIONS && CFG.MISSIONS[j.n - 1]) || {};
+      const isDone = done.includes(j.n);
+      const isCur = cur && cur.n === j.n;
+      const mark = isDone ? '✓' : isCur ? '▶' : '·';
+      const cls = isDone ? 'done' : isCur ? 'cur' : '';
+      return `<div class="${cls}">${mark} JOB ${j.n} — ${j.name}<span class="pay">$${(def.payout || 0).toLocaleString('en-US')}</span></div>`;
+    }).join('');
+    const t = Math.floor(g.time || 0);
+    const hh = String(Math.floor(t / 3600)).padStart(2, '0');
+    const mm = String(Math.floor((t % 3600) / 60)).padStart(2, '0');
+    const ss = String(t % 60).padStart(2, '0');
+    map.querySelector('#map-career').innerHTML = `
       <div><b>${P.carsStolen || 0}</b>CARS STOLEN</div>
-      <div><b>${P.copsEscaped || 0}</b>COPS ESCAPED</div>
-      <div><b>${'★'.repeat(g.wanted || 0) || '—'}</b>HIGHEST WANTED</div>
-      <div><b>${Math.round((P.distanceDriven || 0) / 1000)} km</b>DISTANCE DRIVEN</div>
-      <div><b>${(g.combat && g.combat.kills) || 0}</b>TAKEN OUT</div>
-      <div><b>${P.abilitiesUsed || 0}</b>CREW ABILITIES</div>`;
-    map.querySelector('#map-slots').innerHTML = [1, 2, 3].map((n) => `<div style="font-size:13px;margin:4px 0">${n} · ${pct}% · ${n === 1 && hasSave() ? 'Saved' : 'Empty'} <button class="btn" data-slot="${n}" style="padding:4px 10px">SAVE</button></div>`).join('');
+      <div><b>${P.copsEscaped || 0}</b>IDPD ESCAPES</div>
+      <div><b>${done.length} / 8</b>JOBS DONE</div>
+      <div><b>${hh}:${mm}:${ss}</b>PLAY TIME</div>
+      <div><b>$${Math.floor(g.money || 0).toLocaleString('en-US')}</b>CASH</div>
+      <div><b>${'★'.repeat(g.wanted || 0) || '—'}</b>WANTED</div>`;
+    map.querySelector('#map-legend').innerHTML = [
+      ['◆', 'JOB — CURRENT', '#ffd34d'], ['●', 'JOB — NEXT', '#fff'], ['●', 'JOB — DONE', '#2ec46a'],
+      ['◆', 'CASINO DORADA', '#ffd34d'], ['◆', 'MARINA', '#5eead4'], ['◆', 'WAREHOUSE', '#ff8c42'],
+      ['◆', 'IMPOUND', '#ff8c6a'], ['◆', 'HARBOR', '#9fd8ff'], ['◆', 'BOARDWALK', '#5eead4'],
+      ['◆', 'BEACH', '#f0d49a'], ['◆', 'GAS STATION', '#ff8c42'], ['◆', 'RESTAURANT', '#ff8c6a'],
+      ['◆', 'GARAGE', '#c9b98a'], ['◆', 'FERRIS WHEEL', '#ffd34d'], ['◆', 'CAUSEWAY', '#ff5a3c'],
+      ['▲', 'YOU — PLAYER', '#fff'], ['◆', 'DORADA IDOL', '#ffd34d'], ['▣', 'PROPERTY — OWNED', '#2ec46a'],
+    ].map(([s, n, c]) => `<div><span style="color:${c}">${s}</span> ${n}</div>`).join('');
+    const idols = P.idolsFound || 0;
+    const rankName = P.rankName || 'ROOKIE';
+    const nextAt = P.nextRankAt || 500;
+    const prevAt = P.prevRankAt || 0;
+    const repPct = Math.max(0, Math.min(100, ((g.rep || 0) - prevAt) / Math.max(1, nextAt - prevAt) * 100));
+    const rep = g.rep || 0;
+    const lv = rep >= 12000 ? 6 : rep >= 7000 ? 5 : rep >= 3500 ? 4 : rep >= 1500 ? 3 : rep >= 500 ? 2 : 1;
+    map.querySelector('#map-collect').innerHTML = `
+      <div style="font-size:12px">Found <span class="bar"><i style="width:${(idols / 20) * 100}%"></i></span>${idols} / 20</div>
+      <div style="font-size:12px">REP — LV ${lv} · ${rankName}<span class="bar"><i style="width:${repPct}%"></i></span>${Math.floor(rep).toLocaleString('en-US')} / ${nextAt.toLocaleString('en-US')} XP</div>`;
+    const skills = P.skills || {};
+    map.querySelector('#map-skills').innerHTML = Object.keys(skills).map((n) => {
+      const lv = (skills[n] && skills[n].level) || 1;
+      const dots = '●'.repeat(Math.min(5, lv)) + '○'.repeat(Math.max(0, 5 - Math.min(5, lv)));
+      return `<div class="skillrow"><span>${n} ${dots}</span><span class="bonus">${SKILL_BONUS[n] || ''}</span></div>`;
+    }).join('');
+    const owned = P.properties || [];
+    const props = CFG.PROPERTIES || [];
+    map.querySelector('#map-props').innerHTML = props.map((p) => {
+      const has = owned.includes(p.id);
+      return `<div class="upg ${has ? 'owned' : ''}" style="padding:4px 8px;margin:2px 0"><div><b>${p.name}</b></div>${has ? '<span style="color:#2ec46a">OWNED ✓</span>' : `<span style="color:#ffd34d">BUY $${p.price.toLocaleString('en-US')}</span>`}</div>`;
+    }).join('');
+    const upOwned = (g.upgrades && g.upgrades.owned) || P.upgrades || [];
+    map.querySelector('#map-garage').innerHTML = UPGRADES.map((u) => {
+      const has = upOwned.includes(u.id);
+      return `<div class="upg ${has ? 'owned' : ''}" style="padding:4px 8px;margin:2px 0"><div><b>${u.name}</b></div>${has ? '<span style="color:#2ec46a">OWNED</span>' : `<span style="color:#ffd34d">$${u.price.toLocaleString('en-US')}</span>`}</div>`;
+    }).join('');
+    map.querySelector('#map-slots').innerHTML = [1, 2, 3].map((n) => `<div style="font-size:13px;margin:2px 0">${n} · ${pct}% · ${n === 1 && hasSave() ? 'Saved' : 'Empty'} <button class="btn" data-slot="${n}" style="padding:4px 10px">SAVE</button></div>`).join('');
     map.querySelectorAll('#map-slots .btn').forEach((b) => b.addEventListener('click', () => { saveGame(G); refreshMap(G); }));
     drawMapCanvas(g, map.querySelector('#map-canvas'));
   }
@@ -270,13 +312,20 @@ export function initScreens(G) {
     if (!ctx) return;
     const W = canvas.width;
     const H = canvas.height;
-    // Real world bounds: x -200..215, z -200..200.
     const toX = (x) => ((x + 200) / 415) * W;
     const toY = (z) => ((z + 200) / 400) * H;
     ctx.fillStyle = '#1a2b3a'; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#24404f'; ctx.fillRect(0, 0, W, H);
-    // City blocks (40-unit grid between the real roads).
-    ctx.fillStyle = '#3a4a5a';
+    const DC = [
+      ['CASINO ROW', -60, 60, -110, -10, '#7a3a6b'],
+      ['PALM HEIGHTS', -170, -60, -170, -10, '#3a6b3a'],
+      ['OLD TOWN', -170, -60, -10, 170, '#6b4a2a'],
+      ['HARBOR', -60, 60, 90, 190, '#3a3a6b'],
+      ['MARINA', 60, 150, 90, 190, '#2a6b6b'],
+      ['BEACHFRONT', 60, 172, -170, 90, '#8a7a3a'],
+      ['CAUSEWAY', -170, 170, -190, -170, '#6b3a3a'],
+    ];
+    for (const [n, x0, x1, z0, z1, c] of DC) ctx.fillStyle = c, ctx.fillRect(toX(x0), toY(z0), toX(x1) - toX(x0), toY(z1) - toY(z0));
+    ctx.fillStyle = 'rgba(20,30,44,.35)';
     const cw = (40 / 415) * W - 12;
     const ch = (40 / 400) * H - 12;
     for (let x = -200; x < 200; x += 40) {
@@ -285,7 +334,6 @@ export function initScreens(G) {
         ctx.fillRect(toX(x + 6), toY(z + 6), cw, ch);
       }
     }
-    // Roads: the real centrelines (x roads -160..150, z roads -160..160).
     ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = 3;
     for (const v of [-160, -120, -80, -40, 0, 40, 80, 120, 150]) {
       ctx.beginPath(); ctx.moveTo(toX(v), 0); ctx.lineTo(toX(v), H); ctx.stroke();
@@ -293,19 +341,19 @@ export function initScreens(G) {
     for (const v of [-160, -120, -80, -40, 0, 40, 80, 120, 160]) {
       ctx.beginPath(); ctx.moveTo(0, toY(v)); ctx.lineTo(W, toY(v)); ctx.stroke();
     }
-    // District labels (rects: minX/maxX/minZ/maxZ; fall back to x/z centres).
-    const districts = (CFG.DISTRICTS) || [
-      { name: 'MARINA BAY', x: -120, z: 60 }, { name: 'CASINO ROW', x: 0, z: -40 },
-      { name: 'OLD TOWN', x: 90, z: 20 }, { name: 'CAUSEWAY', x: -100, z: -20 },
-      { name: 'MARKET QUARTER', x: 48, z: 60 }, { name: 'EAST DOCKS', x: 110, z: -90 },
-    ];
-    ctx.fillStyle = '#5eead4'; ctx.font = 'bold 13px sans-serif';
-    for (const d of districts) {
-      const cx = d.x ?? (d.minX + d.maxX) / 2;
-      const cz = d.z ?? (d.minZ + d.maxZ) / 2;
-      ctx.fillText(d.name, toX(cx) - 30, toY(cz));
+    const LAB = { 'CASINO ROW': [-40, -30], 'PALM HEIGHTS': [-115, -90], 'OLD TOWN': [-115, 120], HARBOR: [-30, 110], MARINA: [130, 110], BEACHFRONT: [130, 30], CAUSEWAY: [-140, -180] };
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif';
+    for (const [n, x0, x1, z0, z1] of DC) { const [lx, lz] = LAB[n]; ctx.fillText(n, toX(lx) - 32, toY(lz)); }
+    ctx.font = 'bold 10px sans-serif';
+    for (const [n, x, z, c] of LANDMARKS) {
+      const mx = toX(x);
+      const my = toY(z);
+      ctx.fillStyle = c;
+      ctx.beginPath(); ctx.moveTo(mx, my - 5); ctx.lineTo(mx + 5, my); ctx.lineTo(mx, my + 5); ctx.lineTo(mx - 5, my); ctx.closePath(); ctx.fill();
+      const w = ctx.measureText(n).width;
+      ctx.fillStyle = 'rgba(10,8,6,.78)'; ctx.fillRect(mx + 7, my - 8, w + 6, 13);
+      ctx.fillStyle = '#fff'; ctx.fillText(n, mx + 10, my + 2);
     }
-    // Job markers.
     if (g.missions) {
       for (const job of g.missions.jobs) {
         const done = g.missions.done.includes(job.n);
@@ -316,7 +364,6 @@ export function initScreens(G) {
         ctx.fillText(String(job.n), toX(spot.x) - 3, toY(spot.z) + 4);
       }
     }
-    // Waypoint + route.
     if (g.waypoint && g.player) {
       ctx.strokeStyle = '#ff5a3c'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]);
       ctx.beginPath(); ctx.moveTo(toX(g.player.pos.x), toY(g.player.pos.z)); ctx.lineTo(toX(g.waypoint.x), toY(g.waypoint.z)); ctx.stroke();
@@ -324,7 +371,6 @@ export function initScreens(G) {
       ctx.fillStyle = '#ff5a3c';
       ctx.beginPath(); ctx.arc(toX(g.waypoint.x), toY(g.waypoint.z), 6, 0, Math.PI * 2); ctx.fill();
     }
-    // Player.
     if (g.player) {
       ctx.fillStyle = '#fff';
       ctx.beginPath(); ctx.arc(toX(g.player.pos.x), toY(g.player.pos.z), 6, 0, Math.PI * 2); ctx.fill();
@@ -332,8 +378,6 @@ export function initScreens(G) {
   }
 
   function refreshGarage(g) {
-    // Upgrades live on G.upgrades.owned, mirrored onto G.progression.upgrades
-    // (same array); read either, buy into the canonical store.
     const owned = (g.upgrades && g.upgrades.owned) || (g.progression && g.progression.upgrades) || [];
     garage.querySelector('#garage-car').textContent = `DORADA GT · Damage ${Math.round((g.car && g.car.damage) || 0)}% · Upgrades owned: ${owned.length ? owned.join(', ') : 'none yet'}`;
     garage.querySelector('#garage-upgrades').innerHTML = UPGRADES.map((u) => {
@@ -350,7 +394,6 @@ export function initScreens(G) {
       g.money -= u.price;
       g.upgrades = g.upgrades || { owned: [] };
       g.upgrades.owned.push(u.id);
-      // Keep the progression mirror in sync unless it already is the same array.
       if (g.progression) {
         if (!g.progression.upgrades) g.progression.upgrades = g.upgrades.owned;
         else if (g.progression.upgrades !== g.upgrades.owned && !g.progression.upgrades.includes(u.id)) g.progression.upgrades.push(u.id);
@@ -376,7 +419,6 @@ export function closeGarage(G) { if (G.screens) G.screens.closeGarage(G); }
 export function updateScreens(G, dt) {
   const S = G.screens;
   if (!S) return;
-  // Title panorama: slow orbit over the city at sunset.
   if (G.mode === 'title' && G.camera && G.scene) {
     S._titleAngle += dt * 0.045;
     const r = 95;
